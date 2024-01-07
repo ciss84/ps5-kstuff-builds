@@ -1,0 +1,42 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # every 10 minutes
+  workflow_dispatch: # manually triggerable
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: bd-jb
+
+      - name: Set up Git
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Fetch upstream changes
+        run: |
+          git remote add upstream https://github.com/sleirsgoevy/ps4jb-payloads.git
+          git fetch upstream
+          
+      - name: Merge upstream changes
+        run: |
+          git merge --allow-unrelated-histories --strategy-option=theirs upstream/bd-jb
+          
+      - name: Check for changes between local merge and forked repo
+        run: |
+          if git diff --quiet HEAD origin/bd-jb; then
+            echo "No changes detected"
+          else
+            echo "Changes detected"
+            git push origin master
+          fi
