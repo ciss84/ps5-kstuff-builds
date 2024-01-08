@@ -38,5 +38,5 @@ jobs:
             echo "No changes detected"
           else
             echo "Changes detected"
-            git push origin master
+            git push origin bd-jb
           fi
