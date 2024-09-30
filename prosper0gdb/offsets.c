@@ -695,11 +695,11 @@ DEF(utoken, 0x6506500)
 END_FW()
 
 /*START_FW(550)
-DEF(allproc, 0x27edcb8)
-DEF(idt, 0x64cdc80)
-DEF(gdt_array, 0x64cee30)
-DEF(tss_array, 0x64d0830)
-DEF(pcpu_array, 0x64d2280)
+DEF(allproc, 0x290dd00)                                                        //ok
+DEF(idt, 0x65fdca0)                                                            //ok
+DEF(gdt_array, 0x65fee50)                                                      //ok
+DEF(tss_array, 0x6600850)                                                      //ok
+DEF(pcpu_array, 0x6612680)                                                     //ok
 DEF(doreti_iret, -0x9cf84c)
 DEF(add_rsp_iret, doreti_iret - 7)
 DEF(swapgs_add_rsp_iret, doreti_iret - 10)
@@ -725,10 +725,10 @@ DEF(mmap_self_fix_2_start, -0x1ded7e)
 DEF(mmap_self_fix_2_end, mmap_self_fix_2_start+2)
 DEF(sigaction_fix_start, -0x6c2959)
 DEF(sigaction_fix_end, -0x6c2903)
-DEF(sysents, 0x1709c0)
-DEF(sysents_ps4, 0x168410)
-DEF(sysentvec, 0xd11bb8)
-DEF(sysentvec_ps4, 0xd11d30)
+DEF(sysents, 0x1a2210)                                                        //ok
+DEF(sysents_ps4, 0x199c60)                                                    //ok
+DEF(sysentvec, 0xdf0be8)                                                      //ok
+DEF(sysentvec_ps4, 0xdf0d60)                                                  //ok
 DEF(sceSblServiceMailbox, -0x682490)
 DEF(sceSblAuthMgrSmIsLoadable2, -0x8a5be0)
 DEF(mdbg_call_fix, -0x631e79)
@@ -761,16 +761,16 @@ DEF(copyout, -0x990990)
 DEF(crypt_message_resolve, -0x479890)
 DEF(justreturn, -0x9cf990)
 DEF(justreturn_pop, justreturn+8)
-DEF(mini_syscore_header, 0xdc16e8)
+DEF(mini_syscore_header, 0xe9f938)                                            //ok
 DEF(pop_all_iret, -0x9cf8ab)
 DEF(pop_all_except_rdi_iret, pop_all_iret+4)
 DEF(push_pop_all_iret, -0x96d488)
-DEF(kernel_pmap_store, 0x3257a78)
-DEF(crypt_singleton_array, 0x2e31830)
-DEF(security_flags, 0x6506474)
-DEF(targetid, 0x650647d)
-DEF(qa_flags, 0x6506498)
-DEF(utoken, 0x6506500)
+DEF(kernel_pmap_store, 0x3384a88)                                             //ok
+DEF(crypt_singleton_array, 0x2f3d830)                                         //ok
+DEF(security_flags, 0x66366EC)                                                //ok
+DEF(targetid, 0x66366F5)                                                      //ok
+DEF(qa_flags, 0x6636710)                                                      //ok
+DEF(utoken, 0x6636778)                                                        //ok
 #include "offset_list.txt"
 END_FW()*/
 
