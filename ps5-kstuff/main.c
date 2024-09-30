@@ -521,6 +521,23 @@ static struct shellcore_patch shellcore_patches_451[] = {
     {0x1a0fe5, "\xe9\xe7\x02\x00\x00", 5}, //jmp 0x1a12d1
 };
 
+/*static struct shellcore_patch shellcore_patches_550[] = {
+    {0x974fee, "\x52\xeb\x08\x66\x90", 5},
+    {0x974ff9, "\xe8\xd2\xfb\xff\xff\x58\xc3", 7},
+    {0x974bc1, "\x31\xc0\x50\xeb\xe3", 5},
+    {0x974ba9, "\xe8\x22\x00\x00\x00\x58\xc3", 7},
+    {0x5307f9, "\xeb\x04", 2},
+    {0x26f35c, "\xeb\x04", 2},
+    {0x26f76c, "\xeb\x04", 2},
+    {0x54e1f0, "\xeb", 1},
+    {0x536e1d, "\x90\xe9", 2},
+    {0x54db8f, "\xeb", 1},
+    {0x55137a, "\xc8\x00\x00\x00", 4},
+    {0x1a12d1, "\xe8\xea\x88\x47\x00\x31\xc9\xff\xc1\xe9\xf4\x02\x00\x00", 14},
+    {0x1a15d3, "\x83\xf8\x02\x0f\x43\xc1\xe9\x29\xfa\xff\xff", 11},
+    {0x1a0fe5, "\xe9\xe7\x02\x00\x00", 5},
+};*/
+
 extern char _start[];
 
 static void relocate_shellcore_patches(struct shellcore_patch* patches, size_t n_patches)
@@ -595,6 +612,7 @@ static const struct shellcore_patch* get_shellcore_patches(size_t* n_patches)
     FW(403);
     FW(450);
     FW(451);
+    //FW(550);    
     default:
         *n_patches = 1;
         return 0;
@@ -843,6 +861,31 @@ static struct PARASITES(14) parasites_451 = {
         {-0x47953e, R15},
     }
 };
+
+/*static struct PARASITES(14) parasites_550 = {
+    .lim_syscall = 3,
+    .lim_fself = 12,
+    .lim_total = 14,
+    .parasites = {
+
+        {-0x80281d, RDI},
+        {-0x3884bc, RSI},
+        {-0x38847c, RSI},
+
+        {-0x2cc1c6, RAX},
+        {-0x2ccd3a, RAX},
+        {-0x2ccc00, RAX},
+        {-0x2cc923, RAX},
+        {-0x2cc6ad, RAX},
+        {-0x2cc33e, RDX},
+        {-0x2cc332, RCX},
+        {-0x990b10, RDI},
+        {-0x2cc7e6, R10},
+
+        {-0x47953e, RAX},
+        {-0x47953e, R15},
+    }
+};*/
 
 static struct parasite_desc* get_parasites(size_t* desc_size)
 {
