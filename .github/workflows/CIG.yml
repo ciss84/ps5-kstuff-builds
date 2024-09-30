@@ -35,7 +35,7 @@ jobs:
         
     - name: Run make
       run: |
-        cd gdb_stub
+        cd prosper0gdb
         make      
         
     - name: Create release
@@ -56,6 +56,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./gdb_stub/payload-kek.bin
-        asset_name: gdb_stub.bin             
+        asset_path: ./prosper0gdb/payload.bin
+        asset_name: payload.bin             
         asset_content_type: application/octet-stream
