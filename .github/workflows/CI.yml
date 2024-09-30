@@ -2,25 +2,25 @@ name: Build and Release
 
 on:
   push:
-  branches:
+    branches:
       - bd-jb
-    tags:
-      - "v*.*.*"
-
+  workflow_dispatch:
+  
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
         fetch-depth: 0
         ref: bd-jb
         submodules: 'recursive'
-        
+
     - name: Count commits
       id: count-commits
       run: |
@@ -36,19 +36,26 @@ jobs:
     - name: Run make
       run: |
         cd ps5-kstuff
-        make
-        cd gdb_stub
-        make
-        cd pldldr
-        make  
+        make      
+        
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.count-commits.outputs.commit_count }}
+        release_name: Release ${{ steps.count-commits.outputs.commit_count }}
+        draft: false
+        prerelease: false
 
-      - name: Create release zip
-        run: zip -r release.zip .
-        if: success()
-
-      - name: Upload release.zip to GitHub Releases
-        uses: softprops/action-gh-release@v1
-        with:
-          files: release.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}       
+    - name: Upload files
+      id: upload-release-assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./ps5-kstuff/payload.bin
+        asset_name: payload.bin               
+        asset_content_type: application/octet-stream
