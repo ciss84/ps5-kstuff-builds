@@ -37,6 +37,10 @@ jobs:
       run: |
         cd ps5-kstuff
         make
+        cd gdb_stub
+        make
+        cd pldldr
+        make        
         
     - name: Create release
       id: create_release
@@ -58,4 +62,8 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./ps5-kstuff/payload.bin
         asset_name: payload.bin
+        asset_path: ./gdb_stub/payload-kek.bin
+        asset_name: payload-kek.bin
+        asset_path: ./pldldr/payload.bin
+        asset_name: payload.bin                 
         asset_content_type: application/octet-stream
