@@ -35,9 +35,9 @@ jobs:
         
     - name: Run make
       run: |
-        cd pldldr
-        make
-                
+        cd ps5-kstuff
+        make      
+        
     - name: Create release
       id: create_release
       uses: actions/create-release@v1
@@ -56,6 +56,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./pldldr/payload.bin
-        asset_name: pldldr.bin                
+        asset_path: ./ps5-kstuff/payload.bin
+        asset_name: ps5-kstuff.bin             
         asset_content_type: application/octet-stream
