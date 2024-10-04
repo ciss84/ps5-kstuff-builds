@@ -35,7 +35,7 @@ jobs:
         
     - name: Run make
       run: |
-        cd ps5-kstuff
+        cd gdb_stub
         make      
         
     - name: Create release
@@ -56,6 +56,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./ps5-kstuff/payload.bin
-        asset_name: ps5-kstuff.bin             
+        asset_path: ./gdb_stub/payload-kek.bin
+        asset_name: gdb_stub.bin             
         asset_content_type: application/octet-stream
