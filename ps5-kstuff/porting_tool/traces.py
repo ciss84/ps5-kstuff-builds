@@ -19,7 +19,7 @@ class Trace:
         try: return next(i for i in range(idx, len(self.instrs)) if getter(self[i]) == value)
         except StopIteration: return None
     def find_next_any_reg(self, idx, value):
-        try: return next(i for i, j in range(idx, len(self.instrs)) if getter(self[i]) == value)
+        try: return next(i for i, j in range(idx, len(self.instrs)) if getattr(self[i]) == value)
         except StopIteration: return None
     def is_jump(self, idx):
         return idx + 1 < len(self) and (self[idx+1].rip - self[idx].rip) % 2**64 >= 16

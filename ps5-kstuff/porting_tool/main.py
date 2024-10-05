@@ -133,7 +133,7 @@ def rootvnode():
         if kernel[i+16:i+24] == b'\xff\xff\xff\xff\x01\x00\x00\x00':
             candidates.append(i)
         i += 1
-    ans, = candidates
+    ans = candidates
     return ans
 
 @derive_symbol
@@ -219,7 +219,7 @@ def mini_syscore_header():
     try: remote_fd = gdb.ieval('(int)open("/mini-syscore.elf", 0)')
     except gdb_rpc.DisconnectedException:
         message = ('''\
-You probably have wrong OFFSET_KERNEL_DATA_BASE_ROOTVNODE in the WebKit exploit. Fix this before proceeding.
+You probably have wrong OFFSET_KERNEL_ROOTVNODE in the WebKit exploit. Fix this before proceeding.
 The correct offset is probably '''+hex(symbols['rootvnode'])).split('\n')
         maxlen = max(map(len, message))
         print('#'*(maxlen+2))
