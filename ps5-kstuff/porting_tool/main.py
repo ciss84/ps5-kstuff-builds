@@ -114,30 +114,6 @@ def get_kernel(_cache=[]):
 
 @derive_symbol
 @retry_on_error
-def rootvnode():
-    kernel, kdata_base = get_kernel()
-    root_names = ['mini-syscore.elf', 'SceSysAvControl.elf', 'system', 'user', 'update', 'preinst']
-    ptrs = None
-    for i in root_names:
-        ii = bytearray(len(i)*2+2)
-        ii[:len(i)*2:2] = i.encode('ascii')
-        ptrs1 = {j[-8:] for j in kernel.split(ii)[:-1]}
-        if ptrs is None: ptrs = ptrs1
-        else: ptrs &= ptrs1
-    rootvnode_value, = ptrs
-    i = 0
-    candidates = []
-    while True:
-        i = kernel.find(rootvnode_value, i)
-        if i < 0: break
-        if kernel[i+16:i+24] == b'\xff\xff\xff\xff\x01\x00\x00\x00':
-            candidates.append(i)
-        i += 1
-    ans = candidates
-    return ans
-
-@derive_symbol
-@retry_on_error
 def idt():
     kernel, kdata_base = get_kernel()
     ks = bytes(kernel[i+2:i+4] == b'\x20\x00' and kernel[i+4] < 8 and kernel[i+5] in (0x8e, 0xee) and kernel[i+8:i+16] == b'\xff\xff\xff\xff\x00\x00\x00\x00' for i in range(0, len(kernel), 16))
@@ -216,17 +192,7 @@ def sysents_ps4(): return deref('sysentvec_ps4', 8)
 def mini_syscore_header():
     kernel, kdata_base = get_kernel()
     gdb.use_r0gdb(R0GDB_FLAGS)
-    try: remote_fd = gdb.ieval('(int)open("/mini-syscore.elf", 0)')
-    except gdb_rpc.DisconnectedException:
-        message = ('''\
-You probably have wrong OFFSET_KERNEL_ROOTVNODE in the WebKit exploit. Fix this before proceeding.
-The correct offset is probably '''+hex(symbols['rootvnode'])).split('\n')
-        maxlen = max(map(len, message))
-        print('#'*(maxlen+2))
-        for i in message:
-            print('#'+i+' '*(maxlen-len(i))+'#')
-        print('#'*(maxlen+2))
-        raise
+    remote_fd = gdb.ieval('(int)open("/mini-syscore.elf", 0)')
     remote_buf = gdb.ieval('malloc(4096)')
     assert gdb.ieval('(int)read(%d, %d, 4096)'%(remote_fd, remote_buf)) == 4096
     gdb.execute('set print elements 0')
@@ -430,7 +396,7 @@ def use_kstuff():
     fself_parasites = symbols['fself_parasites'] if 'fself_parasites' in available_symbols else []
     unsorted_parasites = symbols['unsorted_parasites'] if 'unsorted_parasites' in available_symbols else []
     for k in available_symbols:
-        if k not in ('pmap_activate_sw', 'shellcore_offsets', 'printf', 'rootvnode') and not k.endswith('_parasites'):
+        if k not in ('pmap_activate_sw', 'shellcore_offsets', 'printf') and not k.endswith('_parasites'):
             gdb.ieval('offsets.%s = %s'%(k, ostr(kdata_base + symbols[k])))
     gdb.ieval('offsets.nop_ret = '+ostr(kdata_base + symbols['wrmsr_ret'] + 2))
     gdb.ieval('offsets.justreturn_pop = '+ostr(kdata_base + symbols['justreturn'] + 8))
@@ -1100,7 +1066,7 @@ def shellcore_offsets():
     target_fn = int.from_bytes(shellcore[offset+25:offset+29], 'little', signed=True)+offset+29
     ans.append((offset+24, '31c050ebe3'))
     ans.append((offset, (b'\xe8'+(target_fn-offset-5).to_bytes(4, 'little', signed=True)+b'\x58\xc3').hex()))
-    offset, = get_offsets(r'\x44\x89[\xe0\xe8\xf0\xf8]\xff\xc8\x83\xf8\x02\x0f\x83')
+    offset, = get_offsets(r'\x44\x89[\xe0\xe8\xf8]\xff\xc8\x83\xf8\x02\x0f\x83')
     ans.append((offset+8, 'eb04'))
     offsets = get_offsets(r'(\xe8....\x85\xc0\x0f\x88....\x49\x8b\x46\x20\x48\xba\x00\xff\x00\xff\x00\xff\x00\xff|\xe8....\x85\xc0\x0f\x84....\x0f\x88....\x49\x0f\x38)')
     assert len(offsets) == 2
