@@ -13,11 +13,7 @@ jobs:
         submodules: recursive
 
     - name: Setup
-      run: sudo apt install yasm
-
-    - name: Make ps5-self-dumper
-      working-directory: ps5-self-dumper
-      run: make
+      run: sudo apt-get install -y yasm
 
     - name: Make ps5-kstuff
       working-directory: ps5-kstuff
