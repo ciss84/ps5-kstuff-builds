@@ -18,14 +18,14 @@ jobs:
     - name: Checkout Payload
       uses: actions/checkout@v3
 
-    - name: Build hen
+    - name: Build ps5-kstuff
       run: |
-        cd hen
+        cd ps5-kstuff
         make         
 
-    - name: Build ftpsrv
+    - name: Build ps5-self-dumper
       run: |
-        cd ftpsrv
+        cd ps5-self-dumper
         make
 
     - name: Build _old_jump_table_exploit
