@@ -114,6 +114,30 @@ def get_kernel(_cache=[]):
 
 @derive_symbol
 @retry_on_error
+def rootvnode():
+    kernel, kdata_base = get_kernel()
+    root_names = ['mini-syscore.elf', 'SceSysAvControl.elf', 'system', 'user', 'update', 'preinst']
+    ptrs = None
+    for i in root_names:
+        ii = bytearray(len(i)*2+2)
+        ii[:len(i)*2:2] = i.encode('ascii')
+        ptrs1 = {j[-8:] for j in kernel.split(ii)[:-1]}
+        if ptrs is None: ptrs = ptrs1
+        else: ptrs &= ptrs1
+    rootvnode_value, = ptrs
+    i = 0
+    candidates = []
+    while True:
+        i = kernel.find(rootvnode_value, i)
+        if i < 0: break
+        if kernel[i+16:i+24] == b'\xff\xff\xff\xff\x01\x00\x00\x00':
+            candidates.append(i)
+        i += 1
+    ans, = candidates
+    return ans
+
+@derive_symbol
+@retry_on_error
 def idt():
     kernel, kdata_base = get_kernel()
     ks = bytes(kernel[i+2:i+4] == b'\x20\x00' and kernel[i+4] < 8 and kernel[i+5] in (0x8e, 0xee) and kernel[i+8:i+16] == b'\xff\xff\xff\xff\x00\x00\x00\x00' for i in range(0, len(kernel), 16))
@@ -192,7 +216,17 @@ def sysents_ps4(): return deref('sysentvec_ps4', 8)
 def mini_syscore_header():
     kernel, kdata_base = get_kernel()
     gdb.use_r0gdb(R0GDB_FLAGS)
-    remote_fd = gdb.ieval('(int)open("/mini-syscore.elf", 0)')
+    try: remote_fd = gdb.ieval('(int)open("/mini-syscore.elf", 0)')
+    except gdb_rpc.DisconnectedException:
+        message = ('''\
+You probably have wrong OFFSET_KERNEL_DATA_BASE_ROOTVNODE in the WebKit exploit. Fix this before proceeding.
+The correct offset is probably '''+hex(symbols['rootvnode'])).split('\n')
+        maxlen = max(map(len, message))
+        print('#'*(maxlen+2))
+        for i in message:
+            print('#'+i+' '*(maxlen-len(i))+'#')
+        print('#'*(maxlen+2))
+        raise
     remote_buf = gdb.ieval('malloc(4096)')
     assert gdb.ieval('(int)read(%d, %d, 4096)'%(remote_fd, remote_buf)) == 4096
     gdb.execute('set print elements 0')
@@ -396,7 +430,7 @@ def use_kstuff():
     fself_parasites = symbols['fself_parasites'] if 'fself_parasites' in available_symbols else []
     unsorted_parasites = symbols['unsorted_parasites'] if 'unsorted_parasites' in available_symbols else []
     for k in available_symbols:
-        if k not in ('pmap_activate_sw', 'shellcore_offsets', 'printf') and not k.endswith('_parasites'):
+        if k not in ('pmap_activate_sw', 'shellcore_offsets', 'printf', 'rootvnode') and not k.endswith('_parasites'):
             gdb.ieval('offsets.%s = %s'%(k, ostr(kdata_base + symbols[k])))
     gdb.ieval('offsets.nop_ret = '+ostr(kdata_base + symbols['wrmsr_ret'] + 2))
     gdb.ieval('offsets.justreturn_pop = '+ostr(kdata_base + symbols['justreturn'] + 8))
@@ -433,11 +467,11 @@ def init_kstuff():
 def rep_movsb_pop_rbp_ret():
     use_r0gdb_trace(0)
     kdata_base = gdb.ieval('kdata_base')
-    pc0 = gdb.ieval('$pc = (void*)dlsym(0x2001, "getpid")')
+    pc0 = gdb.ieval('$pc = getpid')
     ptr = gdb.ieval('ptr_to_leaked_rep_movsq = kmalloc(8)')
     gdb.ieval('trace_prog = leak_rep_movsq')
     gdb.execute('stepi')
-    assert gdb.ieval('$pc') == pc0 + 12
+    assert gdb.ieval('$pc == ({void*}&p_syscall) + 5')
     rep_movsq = gdb.ieval('{void*}%d'%ptr)
     r0gdb.trace_to_raw()
     # trace from rep movsq to nearby rep movsb
@@ -473,7 +507,7 @@ def cpu_switch():
     gdb.ieval('call_trace_untrace_on_unaligned = 1')
     while len(candidates) != 1:
         del candidates[:]
-        trace = traces.Trace(r0gdb.trace('trace_calls', '(void*)dlsym(0x2001, "_nanosleep")', '(uint64_t[2]){1, 0}', '0'))
+        trace = traces.Trace(r0gdb.trace('trace_calls', 'nanosleep', '(uint64_t[2]){1, 0}', '0'))
         for i in range(1, len(trace)):
             if trace.is_jump(i-1) and trace[i].rsp not in range(trace[i-1].rsp-8, trace[i-1].rsp+9) and trace[i-1].rip >= 2**63 and trace[i].rip >= 2**63:
                 candidates.append(i-1)
@@ -494,7 +528,7 @@ def cpu_switch():
 def syscall_before():
     use_r0gdb_trace(16777216)
     kdata_base = gdb.ieval('kdata_base')
-    trace = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "getpid")'))
+    trace = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'getpid'))
     sys_getpid = gdb.ieval('{void*}%d'%(kdata_base+symbols['sysents']+48*20+8))
     idx_getpid = trace.find_next_rip(0, sys_getpid)
     idx_syscall_after = trace.find_next_instr(idx_getpid-1)
@@ -555,7 +589,7 @@ def dr2gpr_start():
     assert gdb.ieval('{int}%d'%(pcb+0x100)) == 24 # sanity check in case offsets have shifted
     gdb.ieval('{int}%d = 26'%(pcb+0x100))
     # trace nanosleep to get the 3rd argument to cpu_switch
-    trace = traces.Trace(r0gdb.trace('trace_calls', '(void*)dlsym(0x2001, "_nanosleep")', '(uint64_t[2]){1, 0}', '0'))
+    trace = traces.Trace(r0gdb.trace('trace_calls', 'nanosleep', '(uint64_t[2]){1, 0}', '0'))
     cpu_switch = trace.find_next_rip(0, kdata_base + symbols['cpu_switch'])
     assert td == trace[cpu_switch].rdi
     mtx = trace[cpu_switch].rdx
@@ -566,7 +600,7 @@ def dr2gpr_start():
     gdb.ieval('fncall_no_untrace = 1')
     gdb.ieval('sys_getpid = '+ostr(getpid))
     gdb.ieval('offsets.cpu_switch = 0')
-    trace2 = traces.Trace(r0gdb.trace('getpid_to_fncall', '(void*)dlsym(0x2001, "getpid")'))
+    trace2 = traces.Trace(r0gdb.trace('getpid_to_fncall', 'getpid'))
     gdb.ieval('offsets.cpu_switch = '+ostr(kdata_base + symbols['cpu_switch']))
     #globals()['huj'] = trace2
     cpu_switch = trace2.find_next_rip(0, kdata_base + symbols['cpu_switch'])
@@ -626,8 +660,8 @@ def mprotect_fix_start():
     kdata_base = gdb.ieval('kdata_base')
     buf = gdb.ieval('malloc(16384)')
     # get 2 traces to diff
-    trace1 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "mprotect")', buf, 1, 3))
-    trace2 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "mprotect")', buf, 1, 7))
+    trace1 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'mprotect', buf, 1, 3))
+    trace2 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'mprotect', buf, 1, 7))
     # determine the point of divergence
     i1 = trace1.find_next_rip(0, kdata_base + symbols['syscall_after'])
     i2 = trace2.find_next_rip(0, kdata_base + symbols['syscall_after'])
@@ -648,7 +682,7 @@ def sigaction_fix_start():
     kdata_base = gdb.ieval('kdata_base')
     buf = gdb.ieval(r'&"\x01"') # sa_handler = SIG_IGN
     tr = [
-        traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "getpid")+7', i, buf, 0, 0, 0, 0, 416))
+        traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'sigaction', i, buf, 0))
         for i in (15, 9, 17) # SIGTERM, SIGKILL, SIGSTOP
     ]
     i = [i.find_next_rip(0, kdata_base+symbols['syscall_after']) for i in tr]
@@ -679,7 +713,7 @@ def mmap_self_fix_2_start():
     kdata_base = gdb.ieval('kdata_base')
     fd = gdb.ieval('(int)open("/system/common/lib/libScePlayerInvitationDialog.sprx", 0)')
     assert fd >= 0
-    trace = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "mmap")', 0, 16384, 1, 0x80001, fd, 0))
+    trace = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'mmap', 0, 16384, 1, 0x80001, fd, 0))
     gdb.ieval('(int)close(%d)'%fd)
     i = trace.find_next_rip(0, kdata_base + symbols['syscall_after'])
     for j in range(3):
@@ -699,7 +733,7 @@ def mmap_self_fix_1_start():
     gdb.ieval('offsets.mmap_self_fix_2_end = '+ostr(kdata_base+symbols['mmap_self_fix_2_start']+2))
     fd = gdb.ieval('(int)open("/mini-syscore.elf", 0)')
     assert fd >= 0
-    trace = traces.Trace(r0gdb.trace('fix_mmap_self', '(void*)dlsym(0x2001, "mmap")', 0, 16384, 1, 0x80001, fd, 0))
+    trace = traces.Trace(r0gdb.trace('fix_mmap_self', 'mmap', 0, 16384, 1, 0x80001, fd, 0))
     gdb.ieval('(int)close(%d)'%fd)
     # find the function that returns a specific error code
     for i in range(len(trace)-1):
@@ -728,12 +762,12 @@ def mdbg_call_fix():
     # prepare mdbg_call arguments
     buf = gdb.ieval('malloc(1)')
     arg1 = gdb.ieval('(uint64_t)(uint64_t[4]){1, 0x12}')
-    arg2 = gdb.ieval('(uint64_t)(uint64_t[8]){(int)getpid(), (void*)dlsym(0x2001, "getpid"), %d, 1}'%buf)
+    arg2 = gdb.ieval('(uint64_t)(uint64_t[8]){(int)getpid(), getpid, %d, 1}'%buf)
     arg3 = gdb.ieval('(uint64_t)(uint64_t[4]){}')
     # run mdbg_call with and without the debugger cred
-    trace1 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "getpid")+7', arg1, arg2, arg3, 0, 0, 0, 573))
+    trace1 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'mdbg_call', arg1, arg2, arg3, 0, 0, 0))
     gdb.ieval('{void*}({void*}({void*}(get_thread()+8)+0x40)+88) = 0x4800000000000036')
-    trace2 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', '(void*)dlsym(0x2001, "getpid")+7', arg1, arg2, arg3, 0, 0, 0, 573))
+    trace2 = traces.Trace(r0gdb.trace('trace_skip_scheduler_only', 'mdbg_call', arg1, arg2, arg3, 0, 0, 0))
     # find the inner mdbg_call funcion
     i = trace1.find_next_rip(0, kdata_base + symbols['syscall_after'])
     j = trace1.find_last_callee_ret(i-1)
@@ -776,8 +810,8 @@ def sceSblServiceMailbox():
     assert fd >= 0
     # now mmap and mlock first 64 KB of the first segment
     trace = traces.Trace(
-        r0gdb.trace('fix_mmap_self', '(void*)dlsym(0x2001, "mmap")', 0, 65536, 1, 0x80001, fd, 0) +
-        r0gdb.trace('fix_mmap_self', '(void*)dlsym(0x2001, "mlock")', gdb.ieval('(void*)$rax'), 65536)
+        r0gdb.trace('fix_mmap_self', 'mmap', 0, 65536, 1, 0x80001, fd, 0) +
+        r0gdb.trace('fix_mmap_self', 'mlock', gdb.ieval('(void*)$rax'), 65536)
     )
     # filter callers for each function being called
     lrs = collections.defaultdict(list)
@@ -891,19 +925,20 @@ def sceSblServiceMailbox_lr_decryptMultipleSelfBlocks():
     #gdb.ieval('(uint64_t)({void*[%d]}&offsets = {void*[%d]}%d)'%(n, n, buf))
     # map 64k of a fake self
     gdb.ieval('do_fself = 31')
-    r0gdb.do_trace('trace_mailbox', '(void*)dlsym(0x2001, "mmap")', 0, 65536, 1, 0x80001, '(int)open("/data/libSceLibcInternal.sprx", 0)', 0)
+    r0gdb.do_trace('trace_mailbox', 'mmap', 0, 65536, 1, 0x80001, '(int)open("/data/libSceLibcInternal.sprx", 0)', 0)
     assert not (gdb.ieval('$eflags') & 1), gdb.ieval('$rax')
     # the latter check will hang. arm a SIGALRM to interrupt us, 'coz sending ^C will break the python repl
     gdb.execute('handle SIGALRM print stop nopass')
     buf = gdb.ieval('malloc(sizeof(struct sigaction))')
     assert not gdb.ieval('(int)sigaction(2, 0, %s)'%ostr(buf))
     assert not gdb.ieval('(int)sigaction(14, %s, 0)'%ostr(buf))
-    assert not gdb.ieval('((int(*)(void))dlsym(2, "alarm"))(10)')
+    #assert not gdb.ieval('((int(*)(void))dlsym(2, "alarm"))(10)')
+    assert not gdb.ieval('(int)setitimer(0, (uint64_t[4]){0, 0, 10, 0}, 0)')
     # try to mlock it in one go. decryptMultipleSelfBlocks should get called
     gdb.ieval('do_fself = 63')
-    r0gdb.do_trace('trace_mailbox', '(void*)dlsym(0x2001, "mlock")', '$rax', 65536)
+    r0gdb.do_trace('trace_mailbox', 'mlock', '$rax', 65536)
     # check that the syscall hasn't completed normally
-    assert not gdb.ieval('$pc == (void*)dlsym(0x2001, "mlock") + 12')
+    assert not gdb.ieval('$pc == {void*}&p_syscall + 5')
     # now get its lr
     lr = gdb.ieval('mailbox_lr[0]')
     assert lr and not gdb.ieval('mailbox_lr[1]')
@@ -922,8 +957,8 @@ def copyin():
     fd1 = gdb.ieval('{int}%d'%pipebuf)
     fd2 = gdb.ieval('{int}%d'%(pipebuf+4))
     gdb.ieval('jprog = (void*[1]){0}')
-    trace1 = traces.Trace(r0gdb.trace('do_jprog', '(void*)dlsym(0x2001, "_write")', fd2, pipebuf, 123))
-    trace2 = traces.Trace(r0gdb.trace('do_jprog', '(void*)dlsym(0x2001, "_read")', fd1, pipebuf, 123))
+    trace1 = traces.Trace(r0gdb.trace('do_jprog', 'write', fd2, pipebuf, 123))
+    trace2 = traces.Trace(r0gdb.trace('do_jprog', 'read', fd1, pipebuf, 123))
     candidates1 = [i for i in range(1, len(trace1)) if trace1.is_jump(i-1) and trace1[i].rsp == trace1[i-1].rsp - 8 and trace1[i].rdi == pipebuf and trace1[i].rdx == 123]
     assert len(candidates1) == 1
     copyin = trace1[candidates1[0]].rip
@@ -973,11 +1008,11 @@ def loadSelfSegment_watchpoint():
     gdb.ieval('offsets.mmap_self_fix_1_end = (offsets.mmap_self_fix_1_start = %s) + 2'%ostr(kdata_base + symbols['mmap_self_fix_1_start']))
     gdb.ieval('offsets.mmap_self_fix_2_end = (offsets.mmap_self_fix_2_start = %s) + 2'%ostr(kdata_base + symbols['mmap_self_fix_2_start']))
     gdb.ieval('do_fself = 95')
-    rt1 = r0gdb.trace('trace_mailbox', '(void*)dlsym(0x2001, "mmap")', 0, 65536, 1, 0x80001, '(int)open("/data/libSceLibcInternal.sprx", 0)', 0)
+    rt1 = r0gdb.trace('trace_mailbox', 'mmap', 0, 65536, 1, 0x80001, '(int)open("/data/libSceLibcInternal.sprx", 0)', 0)
     assert not (gdb.ieval('$eflags') & 1)
     mapping = gdb.ieval('$rax')
-    rt2 = r0gdb.trace('trace_mailbox', '(void*)dlsym(0x2001, "mlock")', mapping, 16384)
-    rt3 = r0gdb.trace('trace_mailbox', '(void*)dlsym(0x2001, "mlock")', mapping, 65536)
+    rt2 = r0gdb.trace('trace_mailbox', 'mlock', mapping, 16384)
+    rt3 = r0gdb.trace('trace_mailbox', 'mlock', mapping, 65536)
     trace = traces.Trace(rt1+rt2+rt3)
     use_kstuff()
     init_kstuff()
@@ -1017,7 +1052,7 @@ def fself_parasites():
     ensure_fselfs(use_kstuff)
     init_kstuff()
     kdata_base = gdb.ieval('kdata_base')
-    assert gdb.ieval('(int)dlopen("/data/libScePlayerInvitationDialog.sprx", 0)') > 0
+    assert gdb.ieval('(int)dynlib_load_prx("/data/libScePlayerInvitationDialog.sprx", 0, malloc(4), 0)') == 0
     fd = gdb.ieval('(int)open("/data/libSceLibcInternal.sprx", 0)')
     assert fd >= 0
     mapping = gdb.ieval('(void*)mmap(0, 65536, 1, 0x80001, %d, 0)'%fd)
@@ -1066,7 +1101,7 @@ def shellcore_offsets():
     target_fn = int.from_bytes(shellcore[offset+25:offset+29], 'little', signed=True)+offset+29
     ans.append((offset+24, '31c050ebe3'))
     ans.append((offset, (b'\xe8'+(target_fn-offset-5).to_bytes(4, 'little', signed=True)+b'\x58\xc3').hex()))
-    offset, = get_offsets(r'\x44\x89[\xe0\xe8\xf8]\xff\xc8\x83\xf8\x02\x0f\x83')
+    offset, = get_offsets(r'\x44\x89[\xe0\xe8\xf0\xf8]\xff\xc8\x83\xf8\x02\x0f\x83')
     ans.append((offset+8, 'eb04'))
     offsets = get_offsets(r'(\xe8....\x85\xc0\x0f\x88....\x49\x8b\x46\x20\x48\xba\x00\xff\x00\xff\x00\xff\x00\xff|\xe8....\x85\xc0\x0f\x84....\x0f\x88....\x49\x0f\x38)')
     assert len(offsets) == 2
@@ -1164,7 +1199,7 @@ def sceSblServiceMailbox_lr_verifySuperBlock():
     assert 'void' == gdb.eval('set_trace()')
     # call nmount to get verifySuperBlock
     gdb.ieval('trace_prog = trace_mailbox_for_fpkg')
-    gdb.ieval('p_kekcall = (void*)dlsym(0x2001, "getppid") + 7')
+    gdb.ieval('p_kekcall = p_syscall')
     def nmount():
         ans = gdb.ieval('my_nmount(%d, %d, 1)'%(nmount_args, n_args))
         print('nmount() =', ans)
