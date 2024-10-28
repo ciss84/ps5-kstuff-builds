@@ -27,6 +27,11 @@ jobs:
       run: |
         cd ps5-self-dumper
         make
+        
+    - name: Build gdb_stub
+      run: |
+        cd gdb_stub
+        make        
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
