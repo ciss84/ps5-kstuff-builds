@@ -28,11 +28,6 @@ jobs:
         cd ps5-self-dumper
         make
 
-    - name: Build _old_jump_table_exploit
-      run: |
-        cd _old_jump_table_exploit
-        make
-
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:

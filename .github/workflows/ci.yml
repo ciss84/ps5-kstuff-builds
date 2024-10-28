@@ -15,15 +15,13 @@ jobs:
     - name: Setup
       run: sudo apt-get install -y yasm
 
-    - name: Build ps5-kstuff
-      run: |
-        cd ps5-kstuff
-        make         
+    - name: Make ps5-kstuff
+      working-directory: ps5-kstuff
+      run: make
 
-    - name: Build ps5-self-dumper
-      run: |
-        cd ps5-self-dumper
-        make
+    - name: Make gdb_stub
+      working-directory: gdb_stub
+      run: make
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
