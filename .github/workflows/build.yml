@@ -1,4 +1,4 @@
-name: Build
+name: CI
 
 on: [ push, pull_request ]
 
@@ -15,14 +15,22 @@ jobs:
     - name: Setup
       run: sudo apt-get install -y yasm
 
+    - name: Checkout Payload
+      uses: actions/checkout@v3
+
     - name: Build hen
       run: |
-        cd ps5-kstuff
+        cd hen
         make         
 
     - name: Build ftpsrv
       run: |
-        cd ps5-self-dumper
+        cd ftpsrv
+        make
+
+    - name: Build _old_jump_table_exploit
+      run: |
+        cd _old_jump_table_exploit
         make
 
     - name: Upload artifacts
