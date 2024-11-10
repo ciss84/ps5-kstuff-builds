@@ -694,6 +694,86 @@ DEF(utoken, 0x6506500)
 #include "offset_list.txt"
 END_FW()
 
+/*START_FW(550)
+DEF(allproc, 0x290dd00)                                                       //ok
+DEF(idt, 0x65fdca0)                                                           //ok
+DEF(gdt_array, 0x65fee50)                                                     //ok
+DEF(tss_array, 0x6600850)                                                     //ok
+DEF(pcpu_array, 0x6612680)                                                    //ok
+DEF(doreti_iret, -0xA14FD3)                                                   //ok
+DEF(add_rsp_iret, doreti_iret - 7)
+DEF(swapgs_add_rsp_iret, doreti_iret - 10)
+DEF(rep_movsb_pop_rbp_ret, -0x9D57AA)                                         //ok
+DEF(rdmsr_start, -0xA1656A)                                                   //ok
+//DEF(rdmsr_end, -0x9d6cf9)
+DEF(wrmsr_ret, -0xA1793C)                                                     //ok
+DEF(dr2gpr_start, -0xA1BF53)                                                  //ok
+//DEF(dr2gpr_end, -0x9d6d7c)
+DEF(gpr2dr_1_start, -0xA1BE3A)                                                //ok
+//DEF(gpr2dr_1_end, -0x9d6c55)
+DEF(gpr2dr_2_start, -0xA1BD47)                                                //ok
+//DEF(gpr2dr_2_end, -0x9d6de9)
+DEF(mov_cr3_rax, -0x3B886E)                                                   //ok
+DEF(mov_rdi_cr3, -0x3B88DE)                                                   //ok
+DEF(nop_ret, wrmsr_ret + 2)
+DEF(cpu_switch, -0xA1C140)                                                    //ok
+DEF(mprotect_fix_start, -0x94EFE2)                                            //ok
+DEF(mprotect_fix_end, mprotect_fix_start+6)
+DEF(mmap_self_fix_1_start, -0x)                                                         //need
+DEF(mmap_self_fix_1_end, mmap_self_fix_1_start+2)
+DEF(mmap_self_fix_2_start, -0x)                                                         //need
+DEF(mmap_self_fix_2_end, mmap_self_fix_2_start+2)
+DEF(sigaction_fix_start, -0x6F7B30)                                           //ok
+DEF(sigaction_fix_end, -0x6F7AEE)                                             //ok
+DEF(sysents, 0x1a2210)                                                        //ok
+DEF(sysents_ps4, 0x199c60)                                                    //ok
+DEF(sysentvec, 0xdf0be8)                                                      //ok
+DEF(sysentvec_ps4, 0xdf0d60)                                                  //ok
+DEF(sceSblServiceMailbox, -0x6b9140)                                          //ok
+DEF(sceSblAuthMgrSmIsLoadable2, -0x8f4190)                                    //ok
+DEF(mdbg_call_fix, -0x668a71)                                                 //ok
+DEF(syscall_before, -0x845731)                                                //ok
+DEF(syscall_after, -0x84570E)                                                 //ok
+DEF(malloc, -0xC3CD0)                                                         //ok
+DEF(M_something, 0x14255A0)                                                   //ok
+DEF(loadSelfSegment_epilogue, -0x8f3a1d)                                      //ok                                  
+DEF(loadSelfSegment_watchpoint, -0x)                                                    //need
+DEF(loadSelfSegment_watchpoint_lr, -0x8f3c17)                                 //ok
+//DEF(decryptSelfBlock_watchpoint, -0x2cc33e)
+DEF(decryptSelfBlock_watchpoint_lr, -0x8f38da)                                //ok
+DEF(decryptSelfBlock_epilogue, -0x8f3813)                                     //ok
+DEF(decryptMultipleSelfBlocks_watchpoint_lr, -0x8f31a5)                       //ok
+DEF(decryptMultipleSelfBlocks_epilogue, -0x8f2d22)                            //ok
+DEF(sceSblServiceMailbox_lr_verifyHeader, -0x8f3e0c)                          //ok
+DEF(sceSblServiceMailbox_lr_loadSelfSegment, -0x8f3a91)                       //ok
+DEF(sceSblServiceMailbox_lr_decryptSelfBlock, -0x8f3564)                      //ok
+DEF(sceSblServiceMailbox_lr_decryptMultipleSelfBlocks, -0x8f2ddc)             //ok
+DEF(sceSblServiceMailbox_lr_sceSblAuthMgrSmFinalize, -0x8f41ae)               //ok
+DEF(sceSblServiceMailbox_lr_verifySuperBlock, -0x999530)                      //ok
+DEF(sceSblServiceMailbox_lr_sceSblPfsClearKey_1, -0x999ae4)                   //ok
+DEF(sceSblServiceMailbox_lr_sceSblPfsClearKey_2, -0x999a6e)                   //ok
+DEF(sceSblPfsSetKeys, -0x9997e0)                                              //ok
+//DEF(panic, -0x20a10)
+DEF(sceSblServiceCryptAsync, -0x93c670)                                       //ok
+DEF(sceSblServiceCryptAsync_deref_singleton, -0x93c642)                       //ok
+DEF(copyin, -0xa73514)                                                                   //??
+DEF(copyout, -0xa735c4)                                                                  //??
+DEF(crypt_message_resolve, -0x4b0298)                                         //ok
+DEF(justreturn, -0xA15200)                                                    //ok
+DEF(justreturn_pop, justreturn+8)
+DEF(mini_syscore_header, 0xe9f938)                                            //ok
+DEF(pop_all_iret, -0xA15032)                                                  //ok
+DEF(pop_all_except_rdi_iret, pop_all_iret+4)
+DEF(push_pop_all_iret, -0x9AFC70)                                             //ok
+DEF(kernel_pmap_store, 0x3384a88)                                             //ok
+DEF(crypt_singleton_array, 0x2f3d830)                                         //ok
+DEF(security_flags, 0x66366EC)                                                //ok
+DEF(targetid, 0x66366F5)                                                      //ok
+DEF(qa_flags, 0x6636710)                                                      //ok
+DEF(utoken, 0x6636778)                                                        //ok
+#include "offset_list.txt"
+END_FW()*/
+
 void* dlsym(void*, const char*);
 
 int set_offsets(void)
@@ -711,6 +791,7 @@ int set_offsets(void)
     case 0x403: set_offsets_403(); break;
     case 0x450: set_offsets_450(); break;
     case 0x451: set_offsets_451(); break;
+    //case 0x550: set_offsets_550(); break;    
 #endif
     default: return -1;
     }
