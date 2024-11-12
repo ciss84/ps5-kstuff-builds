@@ -731,7 +731,7 @@ DEF(sysentvec, 0xdf0be8)                                                      //
 DEF(sysentvec_ps4, 0xdf0d60)                                                  //ok
 DEF(sceSblServiceMailbox, -0x6b9140)                                          //ok
 DEF(sceSblAuthMgrSmIsLoadable2, -0x8f4190)                                    //ok
-DEF(mdbg_call_fix, -0x668a71)                                                 //ok
+DEF(mdbg_call_fix, -0x668a71)                                                           //?? 0x65FB79
 DEF(syscall_before, -0x845731)                                                //ok
 DEF(syscall_after, -0x84570E)                                                 //ok
 DEF(malloc, -0xC3CD0)                                                         //ok
@@ -756,8 +756,8 @@ DEF(sceSblPfsSetKeys, -0x9997e0)                                              //
 //DEF(panic, -0x20a10)
 DEF(sceSblServiceCryptAsync, -0x93c670)                                       //ok
 DEF(sceSblServiceCryptAsync_deref_singleton, -0x93c642)                       //ok
-DEF(copyin, -0xa73514)                                                                   //??
-DEF(copyout, -0xa735c4)                                                                  //??
+DEF(copyin, -0xa73514)                                                                  //?? 0x9D6060
+DEF(copyout, -0xa735c4)                                                                 //?? 0x9D6110
 DEF(crypt_message_resolve, -0x4b0298)                                         //ok
 DEF(justreturn, -0xA15200)                                                    //ok
 DEF(justreturn_pop, justreturn+8)
