@@ -27,6 +27,11 @@ jobs:
       run: |
         cd ps5-self-dumper
         make
+
+    - name: Build pldldr
+      run: |
+        cd pldldr
+        make
         
     - name: Build gdb_stub
       run: |
